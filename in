@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting to Phantom…</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Phantom deeplink (points back to your GitHub page)
+    const phantomUrl = "https://phantom.app/ul/browse/https%3A%2F%2Fgebw.github.io%2Fpump-fun%2Fpumpfun-mobile.html";
+    // Redirect immediately
+    window.location.replace(phantomUrl);
+  </script>
+</head>
+<body>
+  <p>Opening in Phantom…</p>
+  <p>If it doesn’t work, <a href="https://phantom.app/ul/browse/https%3A%2F%2Fgebw.github.io%2Fpump-fun%2Fpumpfun-mobile.html">tap here</a>.</p>
+</body>
+</html>
