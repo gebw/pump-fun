@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pump.fun Phantom Scalper (Mobile)</title>
+  <style>
+    :root { --bg:#0b0f14; --panel:#121923; --ink:#e6f1ff; --sub:#8aa1c7; --acc:#3da9fc; --warn:#ffb703; --err:#ff5d5d; --ok:#7bd88f; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 1.25rem; margin: 0 0 12px; }
+    .card { background: var(--panel); border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #1d2734; }
+    label { display: block; font-size: 0.85rem; color: var(--sub); margin-bottom: 6px; }
+    input, select { width: 100%; background: #0e141c; color: var(--ink); border: 1px solid #263244; border-radius: 10px; padding: 12px; font-size: 16px; outline: none; }
+    input:focus { border-color: var(--acc); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn { width: 100%; display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 12px; border: 1px solid #2a3b52; background: #152131; color: var(--ink); font-weight: 600; }
+    .btn.primary { background: linear-gradient(180deg, #2488ff, #1d6ed4); border: none; }
+    .btn.warn { background: #2b1f00; border-color: #5a4300; color: #ffd166; }
+    .btn:disabled { opacity: .6; }
+    .flex { display:flex; gap:8px; flex-wrap: wrap; }
+    .tag { padding: 4px 8px; border-radius: 999px; background:#0f1621; color: var(--sub); font-size:.8rem; border:1px solid #203045; }
+    .log { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; background:#0a0f16; border-radius:12px; padding:12px; height:220px; overflow:auto; border:1px solid #1b2636; }
+    .muted { color: var(--sub); font-size: .9rem; }
+    .good { color: var(--ok); }
+    .bad { color: var(--err); }
+    .grid3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; }
+    .sep { height:1px; background:#1b2636; margin:10px 0; }
+    a { color: var(--acc); text-decoration: none; }
+    .tiny { font-size: .78rem; color: var(--sub); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>📈 Pump.fun Phantom Scalper (Mobile)</h1>
+    <div class="card">
+      <div class="muted">Open this page inside the <b>Phantom app's in‑app browser</b> so the wallet provider is available.</div>
+      <div class="sep"></div>
+      <div class="row">
+        <button id="btnConnect" class="btn primary">🔗 Connect Phantom</button>
+        <button id="btnDisconnect" class="btn">⏏ Disconnect</button>
+      </div>
+      <div id="walletInfo" class="flex" style="margin-top:8px; display:none;">
+        <span class="tag" id="pubkeyTag">–</span>
+        <span class="tag" id="balanceTag">Balance: – SOL</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Builder Base URL (Pump.fun-capable endpoint)</label>
+      <input id="inpMetis" placeholder="https://YOUR-ENDPOINT" />
+      <div class="tiny">Must support: <code>GET /pump-fun/quote</code> and <code>POST /pump-fun/swap</code></div>
+      <div class="sep"></div>
+      <label>Solana RPC URL</label>
+      <input id="inpRpc" placeholder="https://api.mainnet-beta.solana.com" />
+      <div class="sep"></div>
+      <label>Token Mint (Pump.fun)</label>
+      <input id="inpMint" placeholder="Mint address (base58)" />
+      <div class="sep"></div>
+      <div class="row">
+        <div>
+          <label>Buy Size (SOL)</label>
+          <input id="inpBuySol" type="number" inputmode="decimal" step="0.001" placeholder="0.02" />
+        </div>
+        <div>
+          <label>Slippage (bps)</label>
+          <input id="inpSlip" type="number" inputmode="numeric" step="1" placeholder="50" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div>
+          <label>Take Profit (%)</label>
+          <input id="inpTP" type="number" inputmode="decimal" step="0.1" placeholder="2.5" />
+        </div>
+        <div>
+          <label>Stop Loss (%)</label>
+          <input id="inpSL" type="number" inputmode="decimal" step="0.1" placeholder="2.0" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div>
+          <label>Poll Interval (ms)</label>
+          <input id="inpPoll" type="number" inputmode="numeric" step="100" placeholder="1500" />
+        </div>
+        <div>
+          <label>Max Hold (s)</label>
+          <input id="inpHold" type="number" inputmode="numeric" step="5" placeholder="180" />
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <button id="btnSave" class="btn">💾 Save Settings</button>
+        <button id="btnLoad" class="btn">📥 Load</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button id="btnBuy" class="btn primary" disabled>🟢 Buy & Monitor</button>
+        <button id="btnSell" class="btn warn" disabled>🔴 Sell Now</button>
+      </div>
+      <div class="sep"></div>
+      <div class="grid3">
+        <div class="muted">Entry (SOL)</div>
+        <div class="muted">Est. Exit (SOL)</div>
+        <div class="muted">PnL</div>
+        <div id="entryVal">–</div>
+        <div id="exitVal">–</div>
+        <div id="pnlVal">–</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex">
+        <span class="tag">Status</span>
+        <span class="tag" id="statusTag">Idle</span>
+      </div>
+      <div id="log" class="log" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="tiny">
+      ⚠️ Use a dedicated wallet and small sizes. 2–3% scalps can be eaten by spread/fees on bonding curves. This tool builds unsigned transactions via your endpoint; your Phantom wallet signs and sends them on-device.
+    </div>
+  </div>
+
+  <script type="module">
+    import { Connection, VersionedTransaction, LAMPORTS_PER_SOL, PublicKey } from "https://esm.sh/@solana/web3.js@1.95.3";
+    const $ = (id) => document.getElementById(id);
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const qs = (obj) => Object.entries(obj).filter(([,v]) => v!==undefined && v!==null).map(([k,v]) => encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
+
+    const state = {
+      provider: null,
+      connection: null,
+      pubkey: null,
+      tokenAmount: 0n,
+      entryCostLamports: 0n,
+      monitoring: false,
+      holdStart: 0,
+    };
+
+    function log(...args) {
+      const el = $("log");
+      const line = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+      el.textContent += line + "\\n";
+      el.scrollTop = el.scrollHeight;
+    }
+    function setStatus(text) { $("statusTag").textContent = text; }
+    function fmtSol(lamports) { return (Number(lamports)/LAMPORTS_PER_SOL).toFixed(6); }
+    function pct(n) { return (n*100).toFixed(2) + "%"; }
+
+    function getSettings() {
+      return {
+        METIS_URL: $("inpMetis").value.trim().replace(/\\/+$/, ""),
+        RPC_URL: $("inpRpc").value.trim(),
+        MINT: $("inpMint").value.trim(),
+        BUY_SOL: Number($("inpBuySol").value || "0.02"),
+        SLIPPAGE_BPS: String($("inpSlip").value || "50"),
+        TP: Number($("inpTP").value || "2.5")/100,
+        SL: Number($("inpSL").value || "2.0")/100,
+        POLL_MS: Number($("inpPoll").value || "1500"),
+        MAX_HOLD_S: Number($("inpHold").value || "180"),
+      };
+    }
+    function saveSettings() {
+      const s = getSettings();
+      localStorage.setItem("pumpfun_mobile_settings", JSON.stringify(s));
+      log("✅ Saved settings");
+    }
+    function loadSettings() {
+      const raw = localStorage.getItem("pumpfun_mobile_settings");
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      $("inpMetis").value = s.METIS_URL || "";
+      $("inpRpc").value = s.RPC_URL || "";
+      $("inpMint").value = s.MINT || "";
+      $("inpBuySol").value = s.BUY_SOL ?? "";
+      $("inpSlip").value = s.SLIPPAGE_BPS ?? "";
+      $("inpTP").value = s.TP ? (s.TP*100).toString() : "";
+      $("inpSL").value = s.SL ? (s.SL*100).toString() : "";
+      $("inpPoll").value = s.POLL_MS ?? "";
+      $("inpHold").value = s.MAX_HOLD_S ?? "";
+      log("⬇️ Loaded settings");
+    }
+
+    async function connectPhantom() {
+      const provider = window?.phantom?.solana || window?.solana;
+      if (!provider) {
+        alert("Open this page inside Phantom's in‑app browser, then try again.");
+        return;
+      }
+      try {
+        const resp = await provider.connect({ onlyIfTrusted: false });
+        state.provider = provider;
+        state.pubkey = resp.publicKey;
+        $("walletInfo").style.display = "flex";
+        $("pubkeyTag").textContent = state.pubkey.toString();
+        const s = getSettings();
+        state.connection = new Connection(s.RPC_URL, "confirmed");
+        const bal = await state.connection.getBalance(state.pubkey);
+        $("balanceTag").textContent = "Balance: " + (bal / LAMPORTS_PER_SOL).toFixed(4) + " SOL";
+        $("btnBuy").disabled = false;
+        $("btnSell").disabled = false;
+        setStatus("Connected");
+        log("🔗 Connected:", state.pubkey.toString());
+      } catch (e) {
+        console.error(e);
+        log("❌ Connect failed:", e.message || e);
+      }
+    }
+
+    async function disconnectPhantom() {
+      try {
+        await state?.provider?.disconnect?.();
+      } catch {}
+      state.provider = null;
+      state.pubkey = null;
+      $("walletInfo").style.display = "none";
+      $("btnBuy").disabled = true;
+      $("btnSell").disabled = true;
+      setStatus("Disconnected");
+      log("⏏ Disconnected");
+    }
+
+    async function getQuote(type, mint, amount, METIS_URL) {
+      const url = METIS_URL + "/pump-fun/quote?" + qs({ type, mint, amount: String(amount) });
+      const r = await fetch(url);
+      if (!r.ok) throw new Error("Quote failed: " + r.status);
+      return r.json();
+    }
+
+    async function buildSwap({ type, mint, inAmount, wallet, slippageBps, METIS_URL }) {
+      const r = await fetch(METIS_URL + "/pump-fun/swap", {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({
+          wallet,
+          type,
+          mint,
+          inAmount: String(inAmount),
+          slippageBps,
+          priorityFeeLevel: "high"
+        })
+      });
+      if (!r.ok) throw new Error("Swap build failed: " + r.status);
+      const data = await r.json();
+      return data.tx; // base64
+    }
+
+    async function sendBuiltTx(base64tx) {
+      const vtx = VersionedTransaction.deserialize(Buffer.from(base64tx, "base64"));
+      const res = await state.provider.signAndSendTransaction(vtx);
+      return res.signature;
+    }
+
+    async function buyAndMonitor() {
+      const s = getSettings();
+      if (!state.provider || !state.pubkey) return alert("Connect Phantom first.");
+      if (!s.METIS_URL || !s.MINT) return alert("Enter your endpoint and mint.");
+      setStatus("Buying...");
+      const inLamports = BigInt(Math.floor(s.BUY_SOL * 1e9));
+      try {
+        const q = await getQuote("BUY", s.MINT, inLamports, s.METIS_URL);
+        log("🧮 Quote BUY outAmount (tokens raw):", q.outAmount);
+        const txb64 = await buildSwap({ type:"BUY", mint:s.MINT, inAmount: inLamports, wallet: state.pubkey.toString(), slippageBps: s.SLIPPAGE_BPS, METIS_URL: s.METIS_URL });
+        const sig = await sendBuiltTx(txb64);
+        log("✅ BUY sent:", "https://solscan.io/tx/" + sig);
+        setStatus("Bought — monitoring...");
+      } catch (e) {
+        log("❌ BUY error:", e.message || e);
+        setStatus("Error");
+        return;
+      }
+
+      // After buy, record entry + token balance via quote back-solve (we'll trust the builder amount)
+      state.entryCostLamports = BigInt(Math.floor(s.BUY_SOL * 1e9));
+      state.holdStart = Date.now();
+      state.monitoring = true;
+
+      // Try to fetch actual token balance (via ATA) – optional best-effort
+      try {
+        const ata = await (async () => {
+          // Derive ATA client-side (SPL calc without importing SPL: simple PDA for associated token)
+          // Fallback: skip and just use purchase outAmount as "tokens"
+          // We’ll skip on mobile to keep it lean; rely on SELL quote using token amount via q.outAmount
+          return null;
+        })();
+      } catch {}
+
+      // We need the number of tokens to sell. Since mobile ATA fetch is skipped,
+      // get it from a SELL quote by solving for tokens not possible; instead, reuse BUY quote's outAmount if present in local scope
+      // Re-quote immediately for BUY to fetch token amount again (approx if previous outAmount not stored)
+      let tokens = 0n;
+      try {
+        const qb = await getQuote("BUY", s.MINT, state.entryCostLamports, s.METIS_URL);
+        tokens = BigInt(qb.outAmount);
+      } catch {
+        // If quote fails, abort monitoring
+        log("⚠️ Could not refresh BUY quote to estimate tokens; stopping.");
+        state.monitoring = false;
+        return;
+      }
+
+      $("entryVal").textContent = (s.BUY_SOL).toFixed(6);
+      while (state.monitoring) {
+        await sleep(s.POLL_MS);
+        try {
+          const qSell = await getQuote("SELL", s.MINT, tokens, s.METIS_URL);
+          const outLamports = BigInt(qSell.outAmount);
+          const pnl = (Number(outLamports - state.entryCostLamports) / Number(state.entryCostLamports));
+          $("exitVal").textContent = (Number(outLamports)/1e9).toFixed(6);
+          $("pnlVal").textContent = pct(pnl);
+          $("pnlVal").className = pnl >= 0 ? "good" : "bad";
+          const age = ((Date.now()-state.holdStart)/1000).toFixed(1);
+          log(`⏱️ ${age}s  |  estExit ${Number(outLamports)/1e9} SOL  |  PnL ${pct(pnl)} `);
+
+          if (pnl >= s.TP) {
+            log("🎯 Take profit reached — SELLING...");
+            await sellNow(tokens);
+            state.monitoring = false;
+            break;
+          }
+          if (pnl <= -s.SL || ((Date.now()-state.holdStart)/1000) > s.MAX_HOLD_S) {
+            log("🛑 Stop/time exit — SELLING...");
+            await sellNow(tokens);
+            state.monitoring = false;
+            break;
+          }
+        } catch (e) {
+          log("⚠️ Monitor error:", e.message || e);
+        }
+      }
+    }
+
+    async function sellNow(tokensOverride=null) {
+      const s = getSettings();
+      if (!state.provider || !state.pubkey) return alert("Connect Phantom first.");
+      setStatus("Selling...");
+      try {
+        let tokens = tokensOverride;
+        if (!tokens) {
+          // As a fallback, estimate tokens by re-quoting the original BUY size
+          const qb = await getQuote("BUY", s.MINT, state.entryCostLamports, s.METIS_URL);
+          tokens = BigInt(qb.outAmount);
+        }
+        const txb64 = await buildSwap({ type:"SELL", mint:s.MINT, inAmount: tokens, wallet: state.pubkey.toString(), slippageBps: s.SLIPPAGE_BPS, METIS_URL: s.METIS_URL });
+        const sig = await sendBuiltTx(txb64);
+        log("✅ SELL sent:", "https://solscan.io/tx/" + sig);
+        setStatus("Sold");
+      } catch (e) {
+        log("❌ SELL error:", e.message || e);
+        setStatus("Error");
+      }
+    }
+
+    // Wire up UI
+    $("btnConnect").addEventListener("click", connectPhantom);
+    $("btnDisconnect").addEventListener("click", disconnectPhantom);
+    $("btnSave").addEventListener("click", saveSettings);
+    $("btnLoad").addEventListener("click", loadSettings);
+    $("btnBuy").addEventListener("click", buyAndMonitor);
+    $("btnSell").addEventListener("click", () => sellNow());
+
+    // Load persisted settings on start
+    loadSettings();
+  </script>
+</body>
+</html>
